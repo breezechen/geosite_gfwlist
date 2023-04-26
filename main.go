@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -21,6 +23,8 @@ var (
 	outputName  = flag.String("outputname", "dlc.dat", "Name of the generated dat file")
 	outputDir   = flag.String("outputdir", "./", "Directory to place all generated files")
 	exportLists = flag.String("exportlists", "", "Lists to be flattened and exported in plaintext format, separated by ',' comma")
+	gfwListPath = flag.String("gfwlist", "", "Path to gfwlist.txt, if not specified, will download from github")
+	outputJson  = flag.Bool("json", false, "Output in json format")
 )
 
 type Entry struct {
@@ -303,7 +307,10 @@ func ParseList(list *List, ref map[string]*List) (*ParsedList, error) {
 }
 
 func main() {
+
 	flag.Parse()
+
+	convertGFWList(*gfwListPath, path.Join(*dataPath, "gfwlist"))
 
 	dir := *dataPath
 	fmt.Println("Use domain lists in", dir)
@@ -378,15 +385,30 @@ func main() {
 		return protoList.Entry[i].CountryCode < protoList.Entry[j].CountryCode
 	})
 
-	protoBytes, err := proto.Marshal(protoList)
-	if err != nil {
-		fmt.Println("Failed:", err)
-		os.Exit(1)
-	}
-	if err := ioutil.WriteFile(filepath.Join(*outputDir, *outputName), protoBytes, 0644); err != nil {
-		fmt.Println("Failed: ", err)
-		os.Exit(1)
+	if *outputJson {
+		jsonBytes, err := json.Marshal(protoList)
+		if err != nil {
+			fmt.Println("Failed:", err)
+			os.Exit(1)
+		}
+
+		if err := ioutil.WriteFile(filepath.Join(*outputDir, *outputName+".json"), jsonBytes, 0644); err != nil {
+			fmt.Println("Failed: ", err)
+			os.Exit(1)
+		} else {
+			fmt.Println(*outputName+".json", "has been generated successfully.")
+		}
 	} else {
-		fmt.Println(*outputName, "has been generated successfully.")
+		protoBytes, err := proto.Marshal(protoList)
+		if err != nil {
+			fmt.Println("Failed:", err)
+			os.Exit(1)
+		}
+		if err := ioutil.WriteFile(filepath.Join(*outputDir, *outputName), protoBytes, 0644); err != nil {
+			fmt.Println("Failed: ", err)
+			os.Exit(1)
+		} else {
+			fmt.Println(*outputName, "has been generated successfully.")
+		}
 	}
 }
