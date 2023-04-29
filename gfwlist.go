@@ -92,10 +92,10 @@ func readFile(file string) {
 }
 
 func convertGFWList(file string, dest string) {
-	if file != "" {
-		readFile(file)
-	} else {
+	if file == "" || file == "-" {
 		readOnline()
+	} else {
+		readFile(file)
 	}
 	sort.Strings(list)
 

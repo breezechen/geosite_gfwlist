@@ -19,12 +19,14 @@ import (
 )
 
 var (
-	dataPath    = flag.String("datapath", "./data", "Path to your custom 'data' directory")
-	outputName  = flag.String("outputname", "dlc.dat", "Name of the generated dat file")
-	outputDir   = flag.String("outputdir", "./", "Directory to place all generated files")
-	exportLists = flag.String("exportlists", "", "Lists to be flattened and exported in plaintext format, separated by ',' comma")
-	gfwListPath = flag.String("gfwlist", "", "Path to gfwlist.txt, if not specified, will download from github")
-	outputJson  = flag.Bool("json", false, "Output in json format")
+	dataPath     = flag.String("datapath", "./data", "Path to your custom 'data' directory")
+	outputName   = flag.String("outputname", "dlc.dat", "Name of the generated dat file")
+	outputDir    = flag.String("outputdir", "./", "Directory to place all generated files")
+	exportLists  = flag.String("exportlists", "", "Lists to be flattened and exported in plaintext format, separated by ',' comma")
+	gfwListPath  = flag.String("gfwlist", "", "Path to gfwlist.txt, if not specified, will download from github")
+	outputJson   = flag.Bool("json", false, "Output in json format")
+	includeLists = flag.String("includelists", "", "Lists to be included in the generated dat file, separated by ',' comma")
+	excludeLists = flag.String("excludelists", "", "Lists to be excluded in the generated dat file, separated by ',' comma")
 )
 
 type Entry struct {
@@ -310,7 +312,9 @@ func main() {
 
 	flag.Parse()
 
-	convertGFWList(*gfwListPath, path.Join(*dataPath, "gfwlist"))
+	if *gfwListPath != "" {
+		convertGFWList(*gfwListPath, path.Join(*dataPath, "gfwlist"))
+	}
 
 	dir := *dataPath
 	fmt.Println("Use domain lists in", dir)
@@ -356,6 +360,33 @@ func main() {
 			fmt.Println("Failed: ", err)
 			os.Exit(1)
 		}
+
+		ignore := false
+		if *includeLists != "" {
+			ignore = true
+			includeListSlice := strings.Split(*includeLists, ",")
+			for _, includeListName := range includeListSlice {
+				if strings.EqualFold(includeListName, refName) {
+					ignore = false
+					break
+				}
+			}
+		}
+
+		if *excludeLists != "" {
+			excludeListSlice := strings.Split(*excludeLists, ",")
+			for _, excludeListName := range excludeListSlice {
+				if strings.EqualFold(excludeListName, refName) {
+					ignore = true
+					break
+				}
+			}
+		}
+
+		if ignore {
+			continue
+		}
+
 		protoList.Entry = append(protoList.Entry, site)
 
 		// Flatten and export plaintext list
